@@ -1,8 +1,8 @@
-// Login Google Identity Services + penyimpanan sesi lokal.
-import { GOOGLE_CLIENT_ID } from './config.js';
+// Login email + PIN (diperiksa Apps Script) + penyimpanan sesi lokal.
 import { api } from './api.js';
 
 const KEY = 'lcm_sesi';
+const KEY_EMAIL = 'lcm_email';
 
 export function getSesi() {
   try {
@@ -20,48 +20,27 @@ export function hapusSesi() {
   try { localStorage.removeItem(KEY); } catch (e) { /* abaikan */ }
 }
 
+/** Username/email terakhir dipakai (agar tidak perlu mengetik ulang). PIN tidak pernah disimpan. */
+export function emailTerakhir() {
+  try { return localStorage.getItem(KEY_EMAIL) || ''; } catch (e) { return ''; }
+}
+
 /** Cek peran sesi: punyaPeran('admin','operator') */
 export function punyaPeran(...daftar) {
   const s = getSesi();
   return !!s && daftar.includes(s.peran);
 }
 
-function tungguGis(ms = 10000) {
-  return new Promise((resolve, reject) => {
-    const mulai = Date.now();
-    (function cek() {
-      if (window.google && google.accounts && google.accounts.id) return resolve();
-      if (Date.now() - mulai > ms) return reject(new Error('Layanan login Google tidak termuat. Periksa koneksi.'));
-      setTimeout(cek, 150);
-    })();
-  });
-}
-
-/** Tampilkan tombol "Masuk dengan Google" di elemen el. */
-export async function renderTombolGoogle(el, onSukses, onGagal) {
-  if (!GOOGLE_CLIENT_ID) throw new Error('GOOGLE_CLIENT_ID belum diisi di js/config.js');
-  await tungguGis();
-  google.accounts.id.initialize({
-    client_id: GOOGLE_CLIENT_ID,
-    auto_select: false,
-    callback: async (resp) => {
-      try {
-        const d = await api('login', { idToken: resp.credential });
-        simpanSesi(d);
-        onSukses(d);
-      } catch (e) {
-        onGagal(e);
-      }
-    }
-  });
-  google.accounts.id.renderButton(el, {
-    theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill', locale: 'id', width: 280
-  });
+export async function login(email, pin) {
+  const e = String(email || '').trim().toLowerCase();
+  const d = await api('login', { user: e, pin: String(pin || '') });
+  simpanSesi(d);
+  try { localStorage.setItem(KEY_EMAIL, e); } catch (err) { /* abaikan */ }
+  return d;
 }
 
 export async function logout() {
   try { await api('logout'); } catch (e) { /* tetap keluar */ }
   hapusSesi();
-  try { google.accounts.id.disableAutoSelect(); } catch (e) { /* abaikan */ }
   location.hash = '#/login';
 }

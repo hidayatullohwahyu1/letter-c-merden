@@ -27,7 +27,7 @@
 - **Bahasa UI:** Bahasa Indonesia semua (label, pesan galat, tombol). Komentar kode boleh Bahasa Indonesia.
 - **Tanpa build step** di frontend. Pakai ES module native. Library hanya dari CDN dengan versi dikunci (mis. `chart.js@4.4.1`). Jangan pakai React/Vue/npm bundler.
 - **Jangan pernah** menaruh data desa, NIK, file Excel, atau kunci rahasia di repo. Repo bersifat publik.
-- `docs/js/config.js` hanya boleh berisi `API_URL`, `GOOGLE_CLIENT_ID`, `APP_VERSION`.
+- `docs/js/config.js` hanya boleh berisi `API_URL`, `APP_VERSION`.
 - Semua `fetch` ke API lewat **satu** fungsi `api(action, data)` di `docs/js/api.js`.
 - Setiap fungsi backend yang dipanggil dari API **wajib** lewat `requireSession_()` dulu (kecuali `login`).
 - Setiap perubahan data **wajib** menulis ke sheet `LOG`.
@@ -51,10 +51,10 @@ letter-c-merden/
 │   ├── css/app.css
 │   ├── icons/                   # icon-192.png, icon-512.png, maskable-512.png, apple-touch-icon.png
 │   └── js/
-│       ├── config.js            # API_URL, GOOGLE_CLIENT_ID, APP_VERSION
+│       ├── config.js            # API_URL, APP_VERSION
 │       ├── app.js               # bootstrap, daftar SW, install prompt, banner offline/update
 │       ├── api.js               # api(action, data), tangani sesi habis
-│       ├── auth.js              # Google Identity Services, login/logout, simpan sesi
+│       ├── auth.js              # login email + PIN, logout, simpan sesi
 │       ├── db.js                # IndexedDB (data ringkas offline)
 │       ├── router.js            # hash router
 │       ├── ui.js                # helper: toast, modal, loading, format angka/tanggal, masking NIK
@@ -100,7 +100,7 @@ letter-c-merden/
 [PWA di HP/laptop]  --fetch POST text/plain {action, token, data}-->  [API Apps Script]
   GitHub Pages (HTTPS)                                                  Auth.gs → cek token sesi & peran
   Service worker + IndexedDB                                            Modul .gs → logika
-  Login Google (GIS)                                                    Data.gs → Cache, Lock, LOG
+  Login email + PIN                                                     Data.gs → Cache, Lock, LOG
                                                                            │
                                          ┌─────────────────────────────────┼──────────────────────┐
                                   Spreadsheet DB_LETTER_C_MERDEN    Drive SCAN_LETTER_C     Drive BACKUP_LETTER_C
@@ -140,20 +140,23 @@ function doGet() { return ContentService.createTextOutput(JSON.stringify({ ok: t
 Kode galat baku: `NO_SESSION`, `SESSION_EXPIRED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION`, `CONFLICT` (data sudah diubah orang lain), `ERROR`.
 Frontend: `NO_SESSION`/`SESSION_EXPIRED` → hapus sesi lokal, arahkan ke `#/login`.
 
-### 4.3 Login dan sesi
-1. Frontend memuat `https://accounts.google.com/gsi/client`, `google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback })`, `renderButton`.
-2. Callback mengirim `credential` (ID token) ke aksi `login`.
+### 4.3 Login dan sesi (email + PIN — tanpa Google Cloud Console)
+> Keputusan pemilik proyek (10 Nov 2026): tidak memakai Google Cloud Console / OAuth Client ID / Google Identity Services.
+1. Halaman login berisi email + PIN; dikirim ke aksi `login` `{email, pin}`.
+2. Admin memberi/mereset PIN dengan mengisi kolom `pin_baru` (min. 6 karakter) di sheet USERS.
 3. `Auth.gs`:
-   - `UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + idToken, {muteHttpExceptions: true})`.
-   - Wajib: `aud === GOOGLE_CLIENT_ID`, `email_verified === 'true'`, `exp` belum lewat.
-   - Cocokkan `email` ke sheet `USERS` dengan `aktif = TRUE`. Tidak ada → `FORBIDDEN`.
+   - Cocokkan `email` ke sheet `USERS` dengan `aktif = TRUE`.
+   - PIN cocok bila `SHA-256(PIN_SALT|email|pin) === pin_hash`, atau sama dengan `pin_baru` (lalu disimpan sebagai `pin_hash`, `pin_baru` dikosongkan).
+   - `PIN_SALT` dibuat otomatis di Script Properties. Email tak terdaftar & PIN salah → `FORBIDDEN` dengan pesan yang sama.
+   - 5× salah → email dikunci 15 menit (`CacheService` key `gagal_<email>`).
+   - Aksi `gantiPin {pin_lama, pin_baru}` untuk pengguna yang sudah masuk.
    - Buat token sesi `Utilities.getUuid()`; simpan di `CacheService.getScriptCache()` key `sess_<token>` = `{email, nama, peran, dusun}`, kedaluwarsa **21600 detik (6 jam, batas maksimum CacheService)**.
    - Tulis LOG aksi `login` (berhasil maupun ditolak).
 4. Frontend simpan `{token, nama, peran, dusun, exp}` di `localStorage` (bungkus try/catch).
 5. `logout` menghapus key cache dan localStorage.
 6. Admin bisa mencabut semua sesi seorang pengguna: simpan `sess_index_<email>` berisi daftar token, hapus semua.
-7. `GOOGLE_CLIENT_ID` dan `ADMIN_EMAIL` disimpan di **Script Properties**, bukan di kode backend.
-8. Di Google Cloud Console, *Authorized JavaScript origins* = `https://<akun>.github.io`.
+7. `ADMIN_EMAIL`, `PIN_SALT`, dan ID lain disimpan di **Script Properties**, bukan di kode backend.
+8. `doGet` tanpa parameter menampilkan halaman berisi tombol menuju PWA; `doGet?status=1` membalas JSON status.
 
 ### 4.4 Peran
 | Peran | Hak |
@@ -200,7 +203,7 @@ Baris 1 = header persis seperti di bawah (snake_case). Tanpa merge cell. Kolom k
 `id_log, waktu, email, aksi, sheet, ref_id, kolom, lama, baru`
 
 ### USERS
-`email, nama, peran, dusun, aktif`
+`email, nama, peran, dusun, aktif, pin_hash, pin_baru`
 
 ### REF
 Blok-blok daftar baku: tipe, kelas, status, dusun (I–V), jenis mutasi, **peta kata → arah**:
@@ -244,7 +247,8 @@ Semua: `POST`, body `{action, token, data}`. Kolom "Peran" = peran minimal.
 
 | Aksi | Peran | data masuk | data keluar |
 |---|---|---|---|
-| `login` | — | `{idToken}` | `{token, nama, peran, dusun, exp}` |
+| `login` | — | `{email, pin}` | `{token, nama, peran, dusun, exp}` |
+| `gantiPin` | semua | `{pin_lama, pin_baru}` | `{}` |
 | `logout` | semua | — | `{}` |
 | `me` | semua | — | profil sesi |
 | `cari` | semua | `{q, filter:{dusun,status,tipe,kelas,dobel}, hal}` | `{total, hal, baris:[{nomor_c, id_c, nama, dusun, jml_persil, luas_aktif, status_c, dobel}]}` (50/hal) |
@@ -347,7 +351,7 @@ Router hash: `#/login`, `#/` (beranda), `#/cari?q=`, `#/c/<nomor_c>`, `#/c/<nomo
 Navigasi: HP = menu bawah 5 ikon (Beranda, Cari, Koreksi, PTSL, Lainnya); laptop ≥ 900 px = menu samping. Tombol yang tidak boleh untuk peran → disembunyikan **dan** tetap ditolak server.
 
 ### M1 Login
-Logo, nama aplikasi, tombol Google. Pesan jelas untuk "Akses ditolak — hubungi admin desa".
+Logo, nama aplikasi, form email + PIN. Pesan jelas untuk "Akses ditolak — hubungi admin desa".
 
 ### M2 Cari & Detail
 - Kotak cari besar, debounce 300 ms, filter chip (dusun, status, tipe, kelas, hanya dobel). Kartu hasil di HP, tabel di laptop. Paging 50.
@@ -434,7 +438,9 @@ Kartu: record C, Nomor C unik, record dobel, C aktif, persil aktif, luas aktif (
 | Kunci | Isi |
 |---|---|
 | `DB_ID` | ID spreadsheet DB_LETTER_C_MERDEN |
-| `GOOGLE_CLIENT_ID` | OAuth Client ID (Web) |
+| `MASTER_ID` | ID Google Sheet master (untuk `jalankanImpor`) |
+| `APP_FOLDER_ID` | folder Drive aplikasi (DB & backup dibuat di sini) |
+| `PIN_SALT` | dibuat otomatis — jangan diubah (mengubahnya membatalkan semua PIN) |
 | `SCAN_FOLDER_ID` | folder Drive scan IMGxxxx.jpg |
 | `BACKUP_FOLDER_ID` | folder backup |
 | `TEMPLATE_ID` | Google Sheet template impor |
@@ -494,9 +500,9 @@ Cetak surat keterangan riwayat tanah (PDF), data PTSL 2026, peta bidang (Leaflet
 
 ---
 
-## 15. Pertanyaan terbuka (tanyakan ke pemilik proyek bila belum terjawab)
+## 15. Jawaban pemilik proyek (10 Nov 2026)
 
-1. Akun Google pemilik spreadsheet, API, dan OAuth Client ID (pribadi atau akun desa)?
-2. Akun GitHub dan nama repo; cukup `<akun>.github.io/letter-c-merden` atau perlu domain sendiri?
-3. Apakah scan buku C sudah lengkap di satu folder?
-4. Apakah aplikasi Letter C tujuan impor masih dipakai?
+1. Akun Google pribadi pemilik proyek (spreadsheet & Apps Script). Tidak memakai Google Cloud Console; aplikasi harus gratis.
+2. GitHub `hidayatullohwahyu1`, repo `letter-c-merden`, alamat `hidayatullohwahyu1.github.io/letter-c-merden`.
+3. Scan buku C belum ada (`SCAN_FOLDER_ID` kosong).
+4. Belum ada aplikasi Letter C tujuan impor (Ekspor template tidak mendesak).

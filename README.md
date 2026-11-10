@@ -3,12 +3,14 @@
 Aplikasi web (PWA) untuk mencari, memperbaiki, dan memantau data buku Letter C Desa Merden,
 Kec. Purwanegara, Kab. Banjarnegara.
 
-- **Frontend:** folder `docs/` → GitHub Pages (HTML/CSS/JS tanpa build).
-- **Backend:** folder `gas/` → Google Apps Script (JSON API) + Google Spreadsheet `DB_LETTER_C_MERDEN`.
+- **Aplikasi (PWA):** folder `docs/` → GitHub Pages, bisa dipasang di HP Android dari Chrome.
+- **API:** folder `gas/` → Google Apps Script + Google Spreadsheet `DB_LETTER_C_MERDEN`.
+- **Login:** email + PIN, diperiksa Apps Script. **Tidak perlu Google Cloud Console.**
+- **Biaya:** gratis (GitHub Pages publik + kuota gratis Apps Script/Drive). Jangan aktifkan penagihan apa pun.
 - Spesifikasi lengkap: [`CLAUDE.md`](CLAUDE.md).
 
 > ⚠️ Repo ini **publik**. Jangan pernah meng-commit file Excel, data desa, NIK, atau kunci rahasia.
-> `.gitignore` sudah menolak `*.xlsx`, `*.xls`, `*.csv`.
+> `.gitignore` sudah menolak `*.xlsx`, `*.xls`, `*.csv`, `gas/Lokal.gs`, `gas/.clasp.json`.
 
 Status: **Tahap 1 (Fondasi)** — login, cari, detail C, lihat scan, PWA terpasang.
 
@@ -16,98 +18,83 @@ Status: **Tahap 1 (Fondasi)** — login, cari, detail C, lihat scan, PWA terpasa
 
 ## 1. Siapkan Google Spreadsheet & Apps Script
 
-Semua langkah memakai **akun Google pemilik aplikasi** (yang akan memiliki spreadsheet, API, dan OAuth Client ID).
+Semua langkah memakai **akun Google pemilik aplikasi**.
 
-1. **Unggah master**: unggah `MASTER_LETTER_C_MERDEN.xlsx` ke Google Drive → klik kanan →
-   *Buka dengan → Google Spreadsheet*. Lalu *File → Simpan sebagai Google Spreadsheet*.
-   Catat ID-nya (bagian URL antara `/d/` dan `/edit`).
-2. **Buat proyek Apps Script**: buka <https://script.google.com> → *Proyek baru* → beri nama `LETTER C MERDEN API`.
-3. **Salin kode**: salin semua file `gas/*.gs` dan `gas/appsscript.json` ke proyek
-   (tampilkan `appsscript.json` lewat *Setelan proyek → Tampilkan file manifes "appsscript.json"*).
-   Atau pakai clasp:
-   ```bash
-   clasp login
-   ```
+1. **Unggah master**: unggah `MASTER_LETTER_C_MERDEN.xlsx` ke Google Drive → *Buka dengan → Google Spreadsheet*
+   → *File → Simpan sebagai Google Spreadsheet*. Catat ID-nya (bagian URL antara `/d/` dan `/edit`).
+2. **Buat proyek & kirim kode dengan clasp** (sekali login: `clasp login`):
    ```bash
    cd gas
    ```
-   salin `.clasp.json.contoh` menjadi `.clasp.json`, isi `scriptId`, lalu:
    ```bash
-   clasp push
+   clasp create --type standalone --title "LETTER C MERDEN API" --rootDir .
    ```
-4. **Aktifkan layanan Drive API**: di editor → *Layanan (+)* → *Drive API* v3 (sudah tertulis di manifes).
-5. **Isi Script Properties** (*Setelan proyek → Properti skrip*):
+   (Perintah `create` menimpa `appsscript.json`; kembalikan file manifes dari repo sebelum push.)
+   ```bash
+   clasp push --force
+   ```
+3. **Isi Script Properties** (*Setelan proyek → Properti skrip*), atau buat `gas/Lokal.gs` (tidak masuk repo)
+   berisi fungsi `aturProperti()`:
 
    | Kunci | Isi |
    |---|---|
-   | `ADMIN_EMAIL` | email Google admin pertama |
-   | `GOOGLE_CLIENT_ID` | dari langkah 2 di bawah |
-   | `MASTER_ID` | ID Google Sheet master (langkah 1) |
+   | `ADMIN_EMAIL` | email admin pertama |
+   | `MASTER_ID` | ID Google Sheet master |
+   | `APP_FOLDER_ID` | *opsional* — folder Drive tempat DB & backup dibuat |
    | `DB_ID` | *kosongkan* — dibuat otomatis oleh `setupDatabase()` |
    | `SCAN_FOLDER_ID` | *kosongkan* sampai scan buku C tersedia |
-   | `BACKUP_FOLDER_ID` | *boleh kosong* — folder `BACKUP_LETTER_C` dibuat otomatis |
+   | `PIN_SALT` | *jangan diisi* — dibuat otomatis saat login pertama |
 
-6. Di editor, pilih fungsi **`setupDatabase`** → *Jalankan* → izinkan akses.
-   Spreadsheet `DB_LETTER_C_MERDEN` dibuat, `DB_ID` terisi, admin masuk sheet USERS, pemicu backup harian dibuat.
-7. Pilih fungsi **`jalankanImpor`** → *Jalankan*. Lihat *Log eksekusi*; harus tertulis:
-   ```
-   C: 3326 baris (harapan 3326) COCOK
-   PERSIL: 8165 baris (harapan 8165) COCOK
-   MUTASI: 3986 baris (harapan 3986) COCOK
-   PTSL: 384 baris (harapan 384) COCOK
-   KOREKSI: 752 baris (harapan 752) COCOK
-   ```
-8. (Opsional) jalankan `ujiCari` untuk melihat hasil cari "1" di log.
+4. Di editor, jalankan **`setupDatabase`** (izinkan akses), lalu **`jalankanImpor`**.
+   Jalankan **`cekJumlah`**; log harus menulis COCOK untuk C 3326, PERSIL 8165, MUTASI 3986, PTSL 384, KOREKSI 752.
 
-## 2. Buat OAuth Client ID (login Google)
+## 2. Deploy API
 
-1. Buka <https://console.cloud.google.com> dengan akun yang sama → buat proyek `letter-c-merden`.
-2. *APIs & Services → OAuth consent screen*: tipe **External**, isi nama aplikasi "Letter C Merden",
-   email dukungan. Status *Testing* cukup, tetapi setiap pengguna harus didaftarkan sebagai *Test user* —
-   atau klik *Publish app* agar semua akun yang ada di sheet USERS bisa masuk (aplikasi hanya meminta email & profil).
-3. *Credentials → Create credentials → OAuth client ID* → tipe **Web application**.
-   *Authorized JavaScript origins*:
-   - `https://hidayatullohwahyu1.github.io`
-   - `http://localhost:8080` (untuk uji lokal)
-4. Salin **Client ID** → isi ke Script Property `GOOGLE_CLIENT_ID` **dan** ke `docs/js/config.js`.
-   (Client ID bukan rahasia; *client secret* tidak dipakai dan jangan disimpan di mana pun.)
+```bash
+clasp create-deployment --description "Tahap 1"
+```
+Atau di editor: *Terapkan → Penerapan baru → Aplikasi web* (Jalankan sebagai **Saya**, akses **Siapa saja**).
+Salin URL `/exec` → isi `API_URL` di `docs/js/config.js`.
 
-## 3. Deploy API
+- Cek: buka `URL?status=1` → `{"ok":true,"data":{"app":"LETTER C MERDEN","status":"up"}}`.
+- Membuka URL tanpa `?status=1` menampilkan tombol "Buka aplikasi" menuju PWA.
+- Setiap mengubah kode `.gs`, perbarui penerapan yang sama (URL tetap):
+  ```bash
+  clasp create-deployment -i <DEPLOYMENT_ID> -d "keterangan"
+  ```
 
-1. Editor Apps Script → *Terapkan → Penerapan baru* → jenis **Aplikasi web**.
-   - Jalankan sebagai: **Saya**
-   - Yang memiliki akses: **Siapa saja** (keamanan ada di token sesi, bukan di URL)
-2. Salin URL yang berakhiran `/exec` → isi `API_URL` di `docs/js/config.js`.
-3. Cek: buka URL itu di browser → harus tampil `{"ok":true,"data":{"app":"LETTER C MERDEN","status":"up"}}`.
-4. Setiap mengubah kode `.gs`: *Terapkan → Kelola penerapan → Edit → Versi baru* (URL tetap sama).
+## 3. Terbitkan ke GitHub Pages
 
-## 4. Aktifkan GitHub Pages
-
-1. Repo: `https://github.com/hidayatullohwahyu1/letter-c-merden` (publik).
-2. *Settings → Pages → Build and deployment*: **Deploy from a branch**, branch `main`, folder **`/docs`**.
-3. Setelah 1–2 menit, aplikasi ada di `https://hidayatullohwahyu1.github.io/letter-c-merden/`.
-4. Setiap mengubah file di `docs/`: naikkan `APP_VERSION` di `docs/js/config.js` **dan** `CACHE_VERSION`
+1. Repo publik `hidayatullohwahyu1/letter-c-merden`, *Settings → Pages*: branch `main`, folder **`/docs`**.
+2. Aplikasi ada di `https://hidayatullohwahyu1.github.io/letter-c-merden/`.
+3. Setiap mengubah file di `docs/`: naikkan `APP_VERSION` di `docs/js/config.js` **dan** `CACHE_VERSION`
    di `docs/sw.js`, agar HP pengguna menerima versi baru (muncul banner "Versi baru tersedia").
 
-## 5. Tambah pengguna
+## 4. Tambah pengguna & beri PIN
 
 Isi sheet **USERS** di spreadsheet DB:
 
-| email | nama | peran | dusun | aktif |
-|---|---|---|---|---|
-| operator@contoh.id | Nama Operator | operator | | TRUE |
-| kadus2@contoh.id | Nama Kadus | kadus | II | TRUE |
+| email | nama | peran | dusun | aktif | pin_hash | pin_baru |
+|---|---|---|---|---|---|---|
+| operator@contoh.id | Nama Operator | operator | | TRUE | *(kosong)* | 482915 |
+| kadus2@contoh.id | Nama Kadus | kadus | II | TRUE | *(kosong)* | 730164 |
 
-Peran: `admin`, `operator`, `kadus` (wajib isi dusun I–V), `pimpinan`.
+- Peran: `admin`, `operator`, `kadus` (wajib isi dusun I–V), `pimpinan`.
+- **PIN sementara** ditulis di `pin_baru` (minimal 6 karakter). Saat pengguna masuk pertama kali dengan PIN itu,
+  aplikasi menyimpannya sebagai sandi acak di `pin_hash` dan mengosongkan `pin_baru`.
+- Pengguna sebaiknya langsung mengganti PIN di menu **Lainnya → Ganti PIN**.
+- **Lupa PIN / reset**: admin mengisi `pin_baru` lagi (PIN lama tetap berlaku sampai PIN baru dipakai).
+- **Cabut akses**: ubah `aktif` menjadi FALSE.
+- Setelah 5 kali PIN salah, email itu dikunci 15 menit.
 
-## 6. Pasang di HP Android
+## 5. Pasang di HP Android
 
 1. Buka `https://hidayatullohwahyu1.github.io/letter-c-merden/` di **Chrome**.
-2. Masuk dengan akun Google yang terdaftar.
+2. Masuk dengan email + PIN.
 3. Menu **Lainnya → Pasang aplikasi**, atau menu ⋮ Chrome → *Instal aplikasi* / *Tambahkan ke layar utama*.
 4. Ikon "Letter C" muncul di layar utama dan terbuka layar penuh.
 
-## 7. Uji lokal
+## 6. Uji lokal
 
 ```bash
 python -m http.server 8080 --directory docs
@@ -124,7 +111,8 @@ gas/    Apps Script: Api, Auth, Data, Cari, Detail, Scan, Setup, Backup
 ## Catatan keamanan
 
 - Semua aksi selain `login` wajib token sesi (6 jam) dan dicek perannya di server.
-- Email di luar sheet USERS (atau `aktif` ≠ TRUE) ditolak dengan pesan "Akses ditolak — hubungi admin desa".
+- PIN tidak pernah disimpan sebagai teks setelah dipakai; hanya hash SHA-256 bergaram (`PIN_SALT` di Script Properties).
+- Email tak terdaftar dan PIN salah memberi pesan yang sama, agar daftar pengguna tidak bisa ditebak.
 - NIK disamarkan di server untuk semua peran selain admin; NIK tidak pernah disimpan di cache HP.
 - Kadus hanya melihat Nomor C di dusunnya (ditambah record yang dusunnya belum diketahui, agar bisa dilengkapi).
 - Spreadsheet DB, folder scan, dan folder backup **jangan dibagikan**.

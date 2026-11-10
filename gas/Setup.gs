@@ -2,7 +2,7 @@
  * Setup.gs — buat database & impor awal dari MASTER_LETTER_C_MERDEN (Google Sheets hasil konversi).
  *
  * Urutan untuk Admin (dari editor Apps Script):
- *   1. Isi Script Properties: GOOGLE_CLIENT_ID, ADMIN_EMAIL, MASTER_ID (DB_ID boleh kosong → dibuat otomatis).
+ *   1. Isi Script Properties: ADMIN_EMAIL, MASTER_ID (DB_ID boleh kosong → dibuat otomatis).
  *   2. Jalankan setupDatabase()
  *   3. Jalankan jalankanImpor()
  */
@@ -270,4 +270,10 @@ function cekJumlah() {
   out.push('DB: ' + ss.getUrl());
   Logger.log(out.join('\n'));
   return out.join('\n');
+}
+
+/** Tambahkan kolom pin_hash & pin_baru ke sheet USERS (untuk DB yang dibuat sebelum login PIN). */
+function siapkanKolomPin() {
+  pastikanKolomUsers_();
+  Logger.log('Kolom pin_hash & pin_baru siap. Isi PIN sementara (min. 6 karakter) di kolom pin_baru: ' + db_().getUrl());
 }

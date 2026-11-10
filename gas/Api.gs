@@ -4,6 +4,9 @@
  * Balasan: {ok:true, data} | {ok:false, error:{code, message}}
  */
 
+// Alamat aplikasi (PWA di GitHub Pages) — ditampilkan saat URL Apps Script dibuka di browser
+const APP_URL = 'https://hidayatullohwahyu1.github.io/letter-c-merden/';
+
 // Peran yang boleh untuk tiap tingkat "peran minimal"
 const PERAN_BOLEH = {
   semua: ['admin', 'operator', 'kadus', 'pimpinan'],
@@ -13,12 +16,13 @@ const PERAN_BOLEH = {
 
 // Daftar aksi. publik:true hanya untuk login.
 const AKSI = {
-  login:   { fn: (d) => aksiLogin_(d), publik: true },
-  logout:  { fn: (d, s) => aksiLogout_(d, s), peran: 'semua' },
-  me:      { fn: (d, s) => aksiMe_(d, s), peran: 'semua' },
-  cari:    { fn: (d, s) => aksiCari_(d, s), peran: 'semua' },
-  detailC: { fn: (d, s) => aksiDetailC_(d, s), peran: 'semua' },
-  scan:    { fn: (d, s) => aksiScan_(d, s), peran: 'semua' }
+  login:    { fn: (d) => aksiLogin_(d), publik: true },
+  logout:   { fn: (d, s) => aksiLogout_(d, s), peran: 'semua' },
+  me:       { fn: (d, s) => aksiMe_(d, s), peran: 'semua' },
+  gantiPin: { fn: (d, s) => aksiGantiPin_(d, s), peran: 'semua' },
+  cari:     { fn: (d, s) => aksiCari_(d, s), peran: 'semua' },
+  detailC:  { fn: (d, s) => aksiDetailC_(d, s), peran: 'semua' },
+  scan:     { fn: (d, s) => aksiScan_(d, s), peran: 'semua' }
 };
 
 /** Galat dengan kode baku. */
@@ -52,8 +56,23 @@ function doPost(e) {
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function doGet() {
-  return ContentService
-    .createTextOutput(JSON.stringify({ ok: true, data: { app: 'LETTER C MERDEN', status: 'up' } }))
-    .setMimeType(ContentService.MimeType.JSON);
+/**
+ * GET ?status=1 → JSON status (untuk cek API).
+ * GET biasa (dibuka di browser) → halaman kecil berisi tombol menuju aplikasi.
+ */
+function doGet(e) {
+  if (e && e.parameter && e.parameter.status) {
+    return ContentService
+      .createTextOutput(JSON.stringify({ ok: true, data: { app: 'LETTER C MERDEN', status: 'up' } }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  const html = '<!doctype html><html lang="id"><head><meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<style>body{font:16px/1.5 system-ui,sans-serif;text-align:center;padding:48px 16px;color:#1a1d21}' +
+    'a{display:inline-block;margin-top:16px;padding:14px 24px;border-radius:10px;background:#1F4E78;color:#fff;text-decoration:none;font-weight:600}</style></head>' +
+    '<body><h1>Letter C Merden</h1><p>Buku C tanah Desa Merden</p>' +
+    '<a href="' + APP_URL + '" target="_top">Buka aplikasi</a>' +
+    '<p style="color:#5b6470;font-size:14px;margin-top:24px">Di HP Android: buka di Chrome lalu pilih “Instal aplikasi”.</p></body></html>';
+  return HtmlService.createHtmlOutput(html)
+    .setTitle('Letter C Merden')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }

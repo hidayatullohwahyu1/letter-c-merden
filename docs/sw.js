@@ -1,6 +1,6 @@
 // Service worker LETTER C MERDEN.
 // Naikkan CACHE_VERSION setiap ada perubahan file di docs/.
-const CACHE_VERSION = 'lcm-v2';
+const CACHE_VERSION = 'lcm-v4';
 const CACHE_CDN = 'lcm-cdn';
 
 const SHELL = [

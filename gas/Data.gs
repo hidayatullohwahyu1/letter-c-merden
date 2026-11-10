@@ -17,7 +17,7 @@ const HEADER = {
   KOREKSI: ['id_koreksi', 'sheet', 'ref_id', 'nomor_c', 'kolom', 'nilai', 'masalah', 'saran', 'prioritas', 'status',
             'dicek_oleh', 'dicek_pada', 'catatan', 'kode_aturan'],
   LOG: ['id_log', 'waktu', 'email', 'aksi', 'sheet', 'ref_id', 'kolom', 'lama', 'baru'],
-  USERS: ['email', 'nama', 'peran', 'dusun', 'aktif'],
+  USERS: ['email', 'nama', 'peran', 'dusun', 'aktif', 'pin_hash', 'pin_baru', 'username'],
   REF: ['daftar', 'nilai', 'keterangan'],
   META: ['kunci', 'nilai']
 };

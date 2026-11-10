@@ -195,7 +195,11 @@ body.offline [data-simpan] { pointer-events: none; opacity: .5; }
 /* Login */
 .login { max-width: 360px; margin: 8vh auto 0; text-align: center; }
 .login-logo { border-radius: 20px; }
-.tombol-google { display: flex; justify-content: center; min-height: 48px; margin: 24px 0 12px; }
+.form-login { display: flex; flex-direction: column; gap: 6px; text-align: left; margin: 24px 0 12px; }
+.form-login label { font-size: .9rem; color: var(--redup); margin-top: 6px; }
+.form-login input { min-height: 48px; padding: 0 14px; font: inherit; border: 2px solid var(--garis); border-radius: 10px; background: var(--permukaan); color: var(--teks); }
+.form-login input:focus { outline: none; border-color: var(--utama); }
+.form-login .btn { margin-top: 12px; }
 .pesan-login { min-height: 1.5em; margin-bottom: 12px; }
 .pesan-login.galat { color: var(--bahaya); font-weight: 600; }
 .pesan-login.sukses { color: var(--aksen); }

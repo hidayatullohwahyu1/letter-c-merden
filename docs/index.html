@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Letter C Merden</title>
+  <meta name="description" content="Pencarian dan perbaikan data buku Letter C Desa Merden">
+  <meta name="theme-color" content="#1F4E78">
+  <meta name="color-scheme" content="light dark">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="tanpa-menu">
+  <a class="sr-only lompat" href="#app">Langsung ke isi</a>
+  <div id="pita-offline" class="pita-offline" hidden role="status">Offline — data terakhir. Simpan dinonaktifkan.</div>
+  <div id="banner-update" class="banner-update" hidden role="status">
+    Versi baru tersedia <button class="btn btn-tipis">Muat ulang</button>
+  </div>
+
+  <header class="atas">
+    <a href="#/" class="merek"><img src="icons/icon-192.png" alt="" width="28" height="28"><span>Letter C Merden</span></a>
+    <span id="profil-atas" class="profil-atas"></span>
+  </header>
+
+  <nav id="nav" class="nav" aria-label="Menu utama"></nav>
+
+  <main id="app" class="isi" tabindex="-1"></main>
+
+  <footer class="kaki redup kecil">Desa Merden · Kec. Purwanegara · Kab. Banjarnegara · <span id="versi"></span></footer>
+
+  <div id="toast" class="toast-wadah" aria-live="polite"></div>
+  <div id="modal" class="modal" hidden></div>
+
+  <noscript>Aplikasi ini memerlukan JavaScript.</noscript>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# JANGAN pernah masukkan data desa ke repo publik
+*.xlsx
+*.xls
+*.xlsm
+*.csv
+*.json.bak
+data/
+backup/
+
+# clasp (scriptId & kredensial lokal)
+gas/.clasp.json
+gas/Lokal.gs
+.clasprc.json
+
+# Lain-lain
+.DS_Store
+Thumbs.db
+~$*
+node_modules/
+.claude/settings.local.json

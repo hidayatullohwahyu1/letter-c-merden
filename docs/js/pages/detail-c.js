@@ -1,5 +1,6 @@
 import { api } from '../api.js';
-import { esc, fmtM2, fmtHa, fmtTanggal, loading, galat, modal, toast } from '../ui.js';
+import { getSesi, punyaPeran } from '../auth.js';
+import { esc, fmtM2, fmtHa, fmtTanggal, loading, galat, modal, toast, tanya } from '../ui.js';
 
 const linkC = n => n ? `<a href="#/c/${encodeURIComponent(n)}">C ${esc(n)}</a>` : '–';
 
@@ -17,6 +18,12 @@ export async function render(el, { params, masihAktif }) {
   if (!masihAktif()) return;
   const r = d.ringkas;
   const nomor = r.nomor_c || '(Nomor C kosong)';
+  const sesi = getSesi();
+  const operator = punyaPeran('admin', 'operator');
+  const pimpinan = sesi.peran === 'pimpinan';
+  const enc = encodeURIComponent;
+  const hrefUbahC = c => c.nomor_c ? `#/c/${enc(c.nomor_c)}/ubah?id=${enc(c.id_c)}` : `#/c-id/${enc(c.id_c)}/ubah`;
+  const kadusBoleh = c => sesi.peran === 'kadus' && (!c.dusun || c.dusun === sesi.dusun);
 
   el.innerHTML = `
     <div class="kepala-halaman">
@@ -25,6 +32,10 @@ export async function render(el, { params, masihAktif }) {
       <span class="lencana ${r.status_c === 'Aktif' ? 'lencana-hijau' : 'lencana-abu'}">${esc(r.status_c)}</span>
       ${r.dobel ? '<span class="lencana lencana-peringatan">Nomor C dobel</span>' : ''}
     </div>
+    ${operator && r.nomor_c ? `<div class="baris-tombol kiri aksi-atas">
+      <a class="btn btn-utama" href="#/persil/baru?c=${enc(r.nomor_c)}" data-simpan>+ Tambah persil</a>
+      <a class="btn" href="#/c-baru?nomor=${enc(r.nomor_c)}" data-simpan>+ Record lain dgn nomor ini</a>
+    </div>` : ''}
 
     <div class="grid-pemilik ${d.records.length > 1 ? 'dobel' : ''}">
       ${d.records.map(c => `
@@ -39,7 +50,12 @@ export async function render(el, { params, masihAktif }) {
             <dt>ID</dt><dd class="redup">${esc(c.id_c)}</dd>
             ${c.catatan ? `<dt>Catatan</dt><dd>${esc(c.catatan)}</dd>` : ''}
           </dl>
-          ${c.file_scan ? `<button class="btn" data-scan="${esc(c.file_scan)}">Lihat scan (${esc(c.file_scan)})</button>` : ''}
+          <div class="baris-tombol kiri">
+            ${c.file_scan ? `<button class="btn" data-scan="${esc(c.file_scan)}">Lihat scan (${esc(c.file_scan)})</button>` : ''}
+            ${operator ? `<a class="btn" href="${hrefUbahC(c)}" data-simpan>Ubah</a>` : ''}
+            ${kadusBoleh(c) ? `<a class="btn" href="${hrefUbahC(c)}" data-simpan>Isi dusun</a>` : ''}
+            ${pimpinan ? '' : `<button class="btn btn-tipis" data-lapor="C" data-id="${esc(c.id_c)}" data-simpan>Laporkan masalah</button>`}
+          </div>
         </section>`).join('')}
     </div>
 
@@ -53,7 +69,7 @@ export async function render(el, { params, masihAktif }) {
     <section class="kartu">
       <h2>Persil (${d.persil.length})</h2>
       ${d.persil.length ? `<div class="gulir-x"><table class="tabel">
-        <thead><tr><th>No persil</th><th>Tipe</th><th>Kelas</th><th class="angka">Luas</th><th>Status</th><th>Sebab (asli)</th></tr></thead>
+        <thead><tr><th>No persil</th><th>Tipe</th><th>Kelas</th><th class="angka">Luas</th><th>Status</th><th>Sebab (asli)</th>${pimpinan ? '' : '<th>Aksi</th>'}</tr></thead>
         <tbody>${d.persil.map(p => `
           <tr class="${p.status === 'Aktif' ? 'baris-aktif' : 'baris-nonaktif'}">
             <td>${esc(p.no_persil)}</td>
@@ -62,6 +78,10 @@ export async function render(el, { params, masihAktif }) {
             <td class="angka">${fmtM2(p.luas_total)}<br><span class="kecil redup">${esc(p.luas_ha)} ha + ${esc(p.luas_m2)} m²</span></td>
             <td>${esc(p.status)}</td>
             <td class="kecil">${esc(p.sebab_asli || '')}</td>
+            ${pimpinan ? '' : `<td class="aksi-sel">
+              ${operator ? `<a href="#/persil/${enc(p.id_persil)}/ubah" data-simpan>Ubah</a>
+              <a href="#/mutasi/baru?persil=${enc(p.id_persil)}" data-simpan>Mutasi</a>` : ''}
+              <button class="tautan" data-lapor="PERSIL" data-id="${esc(p.id_persil)}" data-simpan>Lapor</button></td>`}
           </tr>`).join('')}</tbody></table></div>` : '<p class="redup">Belum ada persil.</p>'}
     </section>
 
@@ -80,10 +100,44 @@ export async function render(el, { params, masihAktif }) {
       <ul class="daftar-koreksi">${d.koreksi.map(k => `<li>
         <span class="lencana lencana-${k.prioritas === 'Tinggi' ? 'merah' : k.prioritas === 'Sedang' ? 'peringatan' : 'abu'}">${esc(k.prioritas)}</span>
         <strong>${esc(k.kolom)}</strong> (${esc(k.sheet)} ${esc(k.ref_id)}): ${esc(k.masalah)}
-        ${k.saran ? `<div class="kecil redup">Saran: ${esc(k.saran)}</div>` : ''}</li>`).join('')}</ul></section>` : ''}
+        ${k.saran ? `<div class="kecil redup">Saran: ${esc(k.saran)}</div>` : ''}
+        ${k.catatan ? `<div class="kecil catatan-koreksi">📝 ${esc(k.catatan)}</div>` : ''}
+        ${operator ? `<button class="btn btn-tipis" data-tandai="${esc(k.id_koreksi)}" data-simpan>Tandai sudah</button>` : ''}
+        ${sesi.peran === 'kadus' ? `<button class="btn btn-tipis" data-catat="${esc(k.id_koreksi)}" data-simpan>Catatan</button>` : ''}
+        </li>`).join('')}</ul>
+      <p class="kecil"><a href="#/koreksi?q=${enc(r.nomor_c || '')}">Buka di antrean koreksi</a></p></section>` : ''}
   `;
 
   el.querySelectorAll('[data-scan]').forEach(b => b.addEventListener('click', () => lihatScan(b.dataset.scan)));
+  const muatUlang = () => render(el, { params, masihAktif });
+
+  el.querySelectorAll('[data-lapor]').forEach(b => b.addEventListener('click', async () => {
+    const masalah = await tanya('Laporkan masalah', 'Apa yang salah? (mis. nama salah ketik, luas beda dengan buku)', { ya: 'Kirim laporan', wajib: true });
+    if (!masalah) return;
+    try {
+      await api('laporKoreksi', { sheet: b.dataset.lapor, ref_id: b.dataset.id, masalah });
+      toast('Laporan masuk ke antrean koreksi', 'sukses');
+      muatUlang();
+    } catch (e) { toast(e.message, 'galat'); }
+  }));
+  el.querySelectorAll('[data-tandai]').forEach(b => b.addEventListener('click', async () => {
+    const catatan = await tanya('Tandai sudah', 'Catatan (opsional) — apa yang dicek / diperbaiki?', { ya: 'Tandai sudah' });
+    if (catatan === null) return;
+    try {
+      await api('tandaiKoreksi', { id_koreksi: b.dataset.tandai, status: 'Sudah', catatan });
+      toast('Ditandai sudah', 'sukses');
+      muatUlang();
+    } catch (e) { toast(e.message, 'galat'); }
+  }));
+  el.querySelectorAll('[data-catat]').forEach(b => b.addEventListener('click', async () => {
+    const catatan = await tanya('Catatan koreksi', 'Catatan Anda', {});
+    if (catatan === null) return;
+    try {
+      await api('tandaiKoreksi', { id_koreksi: b.dataset.catat, catatan });
+      toast('Catatan disimpan', 'sukses');
+      muatUlang();
+    } catch (e) { toast(e.message, 'galat'); }
+  }));
 }
 
 function blokMutasi(judul, daftar, kataLawan, tampilkanAsal = false) {

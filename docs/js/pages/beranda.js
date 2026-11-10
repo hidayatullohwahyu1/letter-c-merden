@@ -1,4 +1,4 @@
-import { getSesi } from '../auth.js';
+import { getSesi, punyaPeran } from '../auth.js';
 import { esc } from '../ui.js';
 
 export async function render(el) {
@@ -13,7 +13,8 @@ export async function render(el) {
     </form>
     <div class="grid-pintas">
       <a class="kartu pintas" href="#/cari"><strong>Cari Letter C</strong><span class="redup">Nomor C, nama, persil</span></a>
-      <a class="kartu pintas" href="#/koreksi"><strong>Antrean koreksi</strong><span class="redup">Tahap 2</span></a>
+      <a class="kartu pintas" href="#/koreksi"><strong>Antrean koreksi</strong><span class="redup">Masalah data yang perlu dicek</span></a>
+      ${punyaPeran('admin', 'operator') ? '<a class="kartu pintas" href="#/c-baru" data-simpan><strong>+ Tambah data C</strong><span class="redup">Nomor C baru dari buku</span></a>' : ''}
       <a class="kartu pintas" href="#/ptsl"><strong>Data PTSL</strong><span class="redup">Tahap 3</span></a>
     </div>
     <p class="kecil redup">Dashboard angka & grafik ditambahkan pada Tahap 3.</p>`;

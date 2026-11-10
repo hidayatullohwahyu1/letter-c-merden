@@ -39,9 +39,30 @@ export async function render(el) {
     ${s.peran === 'admin' ? `<section class="kartu"><h2>Admin</h2>
       <p class="redup">Kelola pengguna, peta kata mutasi, log, dan cabut sesi tersedia di Tahap 3.
       Sementara ini, kelola pengguna langsung di sheet USERS. Untuk memberi atau mereset PIN,
-      isi kolom <strong>pin_baru</strong> (minimal 6 karakter); PIN aktif saat pengguna masuk pertama kali.</p></section>` : ''}`;
+      isi kolom <strong>pin_baru</strong> (minimal 6 karakter); PIN aktif saat pengguna masuk pertama kali.</p>
+      <h3>Periksa ulang data</h3>
+      <p class="redup kecil">Jalankan aturan V-01…V-10 pada seluruh data dan tambahkan masalah baru ke antrean koreksi.
+      Masalah yang sudah ada / sudah dikerjakan tidak diubah.</p>
+      <button class="btn" id="periksa" data-simpan>Periksa ulang semua data</button>
+      <p id="hasil-periksa" class="kecil" aria-live="polite"></p></section>` : ''}`;
 
   el.querySelector('#keluar').addEventListener('click', () => logout());
+
+  const periksa = el.querySelector('#periksa');
+  if (periksa) periksa.addEventListener('click', async () => {
+    const out = el.querySelector('#hasil-periksa');
+    periksa.disabled = true;
+    out.textContent = 'Memeriksa seluruh data… (bisa 10–30 detik)';
+    try {
+      const h = await api('periksaUlang');
+      const rinci = Object.entries(h.per_kode || {}).map(([k, n]) => k + ': ' + n).join(', ');
+      out.textContent = h.baru ? `${h.baru} masalah baru ditambahkan (${rinci}). Total antrean ${h.total}.` : 'Tidak ada masalah baru.';
+    } catch (e) {
+      out.textContent = e.message;
+    } finally {
+      periksa.disabled = false;
+    }
+  });
 
   const formPin = el.querySelector('#form-pin');
   formPin.addEventListener('submit', async e => {

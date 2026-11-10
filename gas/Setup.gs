@@ -243,6 +243,8 @@ function imporDariMaster(masterSpreadsheetId) {
 
   aturValidasi_(ss);
   bumpVersion_();
+  hapusIndeksBaris_();
+  CacheService.getScriptCache().remove('ref_v1');
   log_('impor', '', masterSpreadsheetId, '', '', laporan.join('; '), 'sistem');
   const teks = laporan.join('\n');
   Logger.log(teks);

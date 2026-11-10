@@ -9,7 +9,7 @@ function aksiDetailC_(data, sesi) {
   let records;
   if (!nomor) {
     // Record dengan Nomor C kosong (V-01) dibuka lewat id_c
-    records = readSheet_('C').filter(r => !isTrue_(r.dihapus) && str_(r.id_c) === idC);
+    records = cariBaris_('C', 'id_c', idC).filter(r => !isTrue_(r.dihapus));
     if (!records.length) throw err_('NOT_FOUND', 'Record ' + idC + ' tidak ditemukan');
     nomor = str_(records[0].nomor_c);
   }
@@ -17,13 +17,19 @@ function aksiDetailC_(data, sesi) {
   // Nomor C kosong tidak dicocokkan ke persil/mutasi lain
   const sama = v => U !== '' && str_(v).toUpperCase() === U;
 
-  if (!records) records = readSheet_('C').filter(r => !isTrue_(r.dihapus) && sama(r.nomor_c));
+  // Satu kali baca untuk semua bagian detail
+  const [cNomor, persilRaw, milik, lawanRaw, ptslRaw, koreksiRaw] = ambilBanyak_([
+    { name: 'C', kolom: 'nomor_c', nilai: nomor }, { name: 'PERSIL', kolom: 'nomor_c', nilai: nomor },
+    { name: 'MUTASI', kolom: 'nomor_c', nilai: nomor }, { name: 'MUTASI', kolom: 'nomor_c_lawan', nilai: nomor },
+    { name: 'PTSL', kolom: 'nomor_c', nilai: nomor }, { name: 'KOREKSI', kolom: 'nomor_c', nilai: nomor }
+  ]);
+  if (!records) records = cNomor.filter(r => !isTrue_(r.dihapus) && sama(r.nomor_c));
   if (!records.length) throw err_('NOT_FOUND', 'Nomor C ' + nomor + ' tidak ditemukan');
   if (sesi.peran === 'kadus' && !records.some(r => bolehDusun_(sesi, r.dusun))) {
     throw err_('FORBIDDEN', 'Nomor C ini bukan wilayah dusun Anda');
   }
 
-  const persil = readSheet_('PERSIL')
+  const persil = persilRaw
     .filter(p => !isTrue_(p.dihapus) && sama(p.nomor_c))
     .map(p => { const o = bersih_(p); o.luas_total = luasTotal_(p); return o; })
     .sort((a, b) => (a.status === 'Aktif' ? 0 : 1) - (b.status === 'Aktif' ? 0 : 1) ||
@@ -31,7 +37,8 @@ function aksiDetailC_(data, sesi) {
 
   const arah = readRef_().arah;
   const keluar = [], masuk = [], lain = [], disebut = [];
-  readSheet_('MUTASI').forEach(m => {
+  const lawan = lawanRaw.filter(m => !milik.some(x => x._row === m._row));
+  milik.concat(lawan).forEach(m => {
     if (isTrue_(m.dihapus)) return;
     const o = bersih_(m);
     o.arah = arah[str_(m.kata).toLowerCase()] || '';
@@ -46,14 +53,14 @@ function aksiDetailC_(data, sesi) {
   const urutTgl = (a, b) => String(a.tanggal || a.tahun).localeCompare(String(b.tanggal || b.tahun));
   [keluar, masuk, lain, disebut].forEach(x => x.sort(urutTgl));
 
-  const ptsl = readSheet_('PTSL')
+  const ptsl = ptslRaw
     .filter(p => sama(p.nomor_c))
     .map(p => ({
       id_ptsl: p.id_ptsl, tahun: p.tahun, kadus: p.kadus, pemohon: p.pemohon, nik: maskNik_(p.nik, sesi),
       persil: p.persil, kelas: p.kelas, luas: p.luas, nib: p.nib, berkas: p.berkas
     }));
 
-  const koreksi = readSheet_('KOREKSI')
+  const koreksi = koreksiRaw
     .filter(k => sama(k.nomor_c) && str_(k.status) !== 'Sudah')
     .map(bersih_);
 

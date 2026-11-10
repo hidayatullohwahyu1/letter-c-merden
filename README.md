@@ -12,7 +12,23 @@ Kec. Purwanegara, Kab. Banjarnegara.
 > ⚠️ Repo ini **publik**. Jangan pernah meng-commit file Excel, data desa, NIK, atau kunci rahasia.
 > `.gitignore` sudah menolak `*.xlsx`, `*.xls`, `*.csv`, `gas/Lokal.gs`, `gas/.clasp.json`.
 
-Status: **Tahap 1 (Fondasi)** — login, cari, detail C, lihat scan, PWA terpasang.
+Status: **Tahap 2 (Perbaikan data)** — login, cari, detail C, lihat scan, PWA terpasang;
+tambah/ubah/hapus C, persil, mutasi dengan validasi V-01…V-10; antrean koreksi; semua perubahan tercatat di sheet LOG.
+
+## Cara pakai singkat
+
+| Tugas | Di mana |
+|---|---|
+| Cari Nomor C / nama / persil | menu **Cari** |
+| Ubah data pemilik | Detail C → **Ubah** |
+| Tambah persil | Detail C → **+ Tambah persil** |
+| Ubah persil / catat mutasi | Detail C → tabel persil → **Ubah** / **Mutasi** |
+| Mutasi keluar (jual/waris ke C lain) | form Mutasi, arah **ke**: centang *Nonaktifkan persil asal* & *Buat persil di C tujuan* |
+| Kerjakan masalah data | menu **Koreksi** → **Kerjakan** → perbaiki → **Tandai sudah** |
+| Laporkan data salah | Detail C → **Laporkan masalah** |
+| Isi dusun (Kadus) | Detail C → **Isi dusun** |
+| Periksa ulang seluruh data (admin) | **Lainnya → Periksa ulang semua data** |
+| Pulihkan data terhapus (admin) | sementara lewat sheet: ubah kolom `dihapus` jadi FALSE (layar admin di Tahap 3) |
 
 ---
 
@@ -105,7 +121,7 @@ Buka `http://localhost:8080/`.
 
 ```
 docs/   PWA (GitHub Pages)
-gas/    Apps Script: Api, Auth, Data, Cari, Detail, Scan, Setup, Backup
+gas/    Apps Script: Api, Auth, Data, Cari, Detail, Scan, Simpan, Validasi, Koreksi, Setup, Backup
 ```
 
 ## Catatan keamanan

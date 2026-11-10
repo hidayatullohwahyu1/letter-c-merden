@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { getSesi } from '../auth.js';
+import { getSesi, punyaPeran } from '../auth.js';
 import { cariOffline } from '../db.js';
 import { gantiQuery } from '../router.js';
 import { esc, fmtM2, fmtHa, debounce, loading, galat } from '../ui.js';
@@ -69,7 +69,9 @@ export async function render(el, { query, masihAktif }) {
       return;
     }
     if (!d.total) {
-      hasilEl.innerHTML = `<div class="kartu"><p>Tidak ada hasil${st.q ? ' untuk “' + esc(st.q) + '”' : ''}.</p></div>`;
+      const bisaBuat = punyaPeran('admin', 'operator') && /^[0-9][0-9A-Za-z/]*$/.test(st.q);
+      hasilEl.innerHTML = `<div class="kartu"><p>Tidak ada hasil${st.q ? ' untuk “' + esc(st.q) + '”' : ''}.</p>
+        ${bisaBuat ? `<a class="btn btn-utama" href="#/c-baru?nomor=${encodeURIComponent(st.q)}" data-simpan>+ Buat C ${esc(st.q)}</a>` : ''}</div>`;
       return;
     }
     const perHal = d.per_hal || 50;

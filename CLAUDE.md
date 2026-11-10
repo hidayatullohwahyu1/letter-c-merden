@@ -110,7 +110,7 @@ letter-c-merden/
 - `appsscript.json`: `"webapp": {"executeAs": "USER_DEPLOYING", "access": "ANYONE_ANONYMOUS"}`, `"timeZone": "Asia/Jakarta"`.
 - Karena URL bisa dipanggil siapa saja, **keamanan sepenuhnya di token**.
 - Scopes: spreadsheets, drive, script.external_request.
-- Advanced service: Drive API v3 (untuk thumbnail scan).
+- Advanced service: Drive API v3 (untuk thumbnail scan) dan Sheets API v4 (`batchGet` — baca banyak rentang dalam satu panggilan; ada cadangan `getValues`).
 
 ### 4.2 Kontrak request/response
 Request (dari `api.js`):
@@ -253,7 +253,9 @@ Semua: `POST`, body `{action, token, data}`. Kolom "Peran" = peran minimal.
 | `me` | semua | — | profil sesi |
 | `cari` | semua | `{q, filter:{dusun,status,tipe,kelas,dobel}, hal}` | `{total, hal, baris:[{nomor_c, id_c, nama, dusun, jml_persil, luas_aktif, status_c, dobel}]}` (50/hal) |
 | `detailC` | semua | `{nomor_c}` | `{records:[C…], persil:[…+luas_total], mutasi_keluar, mutasi_masuk, ptsl:[…], koreksi:[…], ringkas:{jml_persil, jml_aktif, luas_total, luas_aktif, status_c}}` |
-| `simpanC` | operator | `{…kolom C, diubah_pada_lama?}` | `{id_c, peringatan:[…]}` |
+| `ref` | semua | — | daftar baku tipe/kelas/status/dusun/jenis/arah |
+| `detailPersil` | semua | `{id_persil}` | `{persil, pemilik, mutasi}` |
+| `simpanC` | operator (kadus: isi dusun saja) | `{…kolom C, diubah_pada_lama?, konfirmasi?, ikutkanPersil?}` | `{id_c, perlu_konfirmasi?, peringatan, tanda}` |
 | `simpanPersil` | operator | idem | `{id_persil, peringatan}` |
 | `simpanMutasi` | operator | `{…, nonaktifkanAsal?:bool, buatPersilTujuan?:bool}` | `{id_mutasi, id_persil_baru?}` |
 | `hapus` | operator | `{sheet, id}` | `{}` (soft delete) |
@@ -450,18 +452,19 @@ Kartu: record C, Nomor C unik, record dobel, C aktif, persil aktif, luas aktif (
 
 ## 12. Tahapan pengerjaan
 
-### Tahap 1 — Fondasi
-- [ ] `gas/`: Api.gs, Auth.gs, Data.gs, Setup.gs; `setupDatabase()` + `imporDariMaster()`
-- [ ] Aksi `login`, `logout`, `me`, `cari`, `detailC`, `scan`
-- [ ] `docs/`: index.html, router, api.js, auth.js, ui.js, halaman login, cari, detail C
-- [ ] PWA: manifest, ikon, sw.js, tombol pasang, banner offline/update
-- [ ] README: langkah buat OAuth Client ID, deploy API, aktifkan GitHub Pages, pasang di HP
+### Tahap 1 — Fondasi ✅ (10 Nov 2026)
+- [x] `gas/`: Api.gs, Auth.gs, Data.gs, Setup.gs; `setupDatabase()` + `imporDariMaster()` (impor COCOK)
+- [x] Aksi `login` (username/email + PIN), `logout`, `me`, `gantiPin`, `cari`, `detailC`, `scan`
+- [x] `docs/`: index.html, router, api.js, auth.js, ui.js, halaman login, cari, detail C
+- [x] PWA: manifest, ikon, sw.js, tombol pasang, banner offline/update
+- [x] README: deploy API (clasp), GitHub Pages, PIN pengguna, pasang di HP
 - **Gerbang:** jumlah data impor cocok; terpasang di HP Android; panggilan tanpa token ditolak.
 
-### Tahap 2 — Perbaikan data
-- [ ] Simpan.gs + Validasi.gs; form C, persil, mutasi; soft delete; LOG
-- [ ] Koreksi.gs; halaman antrean koreksi; `laporKoreksi`
-- [ ] Filter Kadus di server
+### Tahap 2 — Perbaikan data ✅ (kode selesai 10 Nov 2026, menunggu uji operator)
+- [x] Simpan.gs + Validasi.gs (V-01…V-10); form C, persil, mutasi; soft delete & pulihkan; LOG per kolom; CONFLICT
+- [x] Koreksi.gs; halaman antrean koreksi (progres, filter, Kerjakan, Tandai sudah, Catatan); `laporKoreksi`; `periksaUlang`
+- [x] Filter Kadus di server (dusun sendiri + dusun kosong; kadus hanya boleh mengisi dusun & catatan)
+- [x] Baca cepat: indeks nomor baris di CacheService + Sheets `batchGet` (detail ±2 dtk)
 - **Gerbang:** semua masalah prioritas Tinggi bisa dikerjakan dan ditandai.
 
 ### Tahap 3 — Riwayat, PTSL, dashboard, ekspor

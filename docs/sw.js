@@ -1,6 +1,6 @@
 // Service worker LETTER C MERDEN.
 // Naikkan CACHE_VERSION setiap ada perubahan file di docs/.
-const CACHE_VERSION = 'lcm-v4';
+const CACHE_VERSION = 'lcm-v5';
 const CACHE_CDN = 'lcm-cdn';
 
 const SHELL = [
@@ -16,11 +16,16 @@ const SHELL = [
   'js/db.js',
   'js/router.js',
   'js/ui.js',
+  'js/ref.js',
   'js/pages/login.js',
   'js/pages/beranda.js',
   'js/pages/cari.js',
   'js/pages/detail-c.js',
   'js/pages/pengaturan.js',
+  'js/pages/form-c.js',
+  'js/pages/form-persil.js',
+  'js/pages/form-mutasi.js',
+  'js/pages/koreksi.js',
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/maskable-512.png',

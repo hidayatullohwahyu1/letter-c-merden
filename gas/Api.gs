@@ -22,7 +22,19 @@ const AKSI = {
   gantiPin: { fn: (d, s) => aksiGantiPin_(d, s), peran: 'semua' },
   cari:     { fn: (d, s) => aksiCari_(d, s), peran: 'semua' },
   detailC:  { fn: (d, s) => aksiDetailC_(d, s), peran: 'semua' },
-  scan:     { fn: (d, s) => aksiScan_(d, s), peran: 'semua' }
+  scan:     { fn: (d, s) => aksiScan_(d, s), peran: 'semua' },
+  // Tahap 2 — perbaikan data
+  ref:           { fn: (d, s) => aksiRef_(d, s), peran: 'semua' },
+  detailPersil:  { fn: (d, s) => aksiDetailPersil_(d, s), peran: 'semua' },
+  simpanC:       { fn: (d, s) => aksiSimpanC_(d, s), peran: 'semua' },      // kadus: hanya dusun (dicek di dalam)
+  simpanPersil:  { fn: (d, s) => aksiSimpanPersil_(d, s), peran: 'operator' },
+  simpanMutasi:  { fn: (d, s) => aksiSimpanMutasi_(d, s), peran: 'operator' },
+  hapus:         { fn: (d, s) => aksiHapus_(d, s), peran: 'operator' },
+  pulihkan:      { fn: (d, s) => aksiPulihkan_(d, s), peran: 'admin' },
+  listKoreksi:   { fn: (d, s) => aksiListKoreksi_(d, s), peran: 'semua' },
+  tandaiKoreksi: { fn: (d, s) => aksiTandaiKoreksi_(d, s), peran: 'semua' }, // kadus: catatan saja (dicek di dalam)
+  laporKoreksi:  { fn: (d, s) => aksiLaporKoreksi_(d, s), peran: 'semua' },
+  periksaUlang:  { fn: (d, s) => aksiPeriksaUlang_(d, s), peran: 'admin' }
 };
 
 /** Galat dengan kode baku. */
@@ -51,7 +63,7 @@ function doPost(e) {
     const req = JSON.parse(e.postData.contents);
     out = { ok: true, data: route_(req) };
   } catch (err) {
-    out = { ok: false, error: { code: err.code || 'ERROR', message: String(err.message || err) } };
+    out = { ok: false, error: { code: err.code || 'ERROR', message: String(err.message || err), detail: err.detail || null } };
   }
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
 }

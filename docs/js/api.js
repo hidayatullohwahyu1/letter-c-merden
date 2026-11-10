@@ -3,9 +3,10 @@ import { API_URL } from './config.js';
 import { getSesi, hapusSesi } from './auth.js';
 
 export class ApiError extends Error {
-  constructor(code, message) {
+  constructor(code, message, detail = null) {
     super(message);
     this.code = code;
+    this.detail = detail; // galat per kolom dari VALIDATION: [{kode, kolom, pesan}]
   }
 }
 
@@ -31,12 +32,12 @@ export async function api(action, data = {}) {
     throw new ApiError('ERROR', 'Jawaban server tidak terbaca (HTTP ' + res.status + ')');
   }
   if (!json.ok) {
-    const { code = 'ERROR', message = 'Terjadi galat' } = json.error || {};
+    const { code = 'ERROR', message = 'Terjadi galat', detail = null } = json.error || {};
     if (code === 'NO_SESSION' || code === 'SESSION_EXPIRED') {
       hapusSesi();
       if (action !== 'login') location.hash = '#/login';
     }
-    throw new ApiError(code, message);
+    throw new ApiError(code, message, detail);
   }
   return json.data;
 }
